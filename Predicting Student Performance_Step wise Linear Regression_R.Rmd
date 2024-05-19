@@ -1,0 +1,466 @@
+---
+title: "Predicting StudentPerformance"
+output: html_notebook
+---
+
+The goal is to create a regression model to forecast student final grade in math “G3” based on the other attributes.
+
+Used UCI’s student performance dataset. The dataset is a
+recording of student grades in math and language and includes attributes related to student
+demographics and school related features. Click on the https://archive.ics.uci.edu/dataset/320/student+performance link, then go to “Data Folder” and
+download and unzip “student.zip”. You will be using student-mat.csv file. 
+
+
+
+Read the dataset into a dataframe.
+Ensure a correct delimiter to read the data correctly and set the “sep” option in read.csv accordingly.
+```{r}
+#C:\Users\Swathi\Downloads
+df_grade <- read.csv("C:/Users/CSC/Downloads/student-mat.csv",header = TRUE,  sep=";")
+
+```
+Exploaratory Data Analysis
+```{r}
+head(df_grade)
+```
+
+```{r}
+str(df_grade)
+```
+```{r}
+summary(df_grade)
+```
+
+
+
+Explore the dataset. More specifically:
+a. Is there any missing values in the dataset?
+```{r}
+missval_dfgrade <- colSums(is.na(df_grade))
+missval_dfgrade 
+```
+```{r}
+print("As given in the description of dataset it is found that there are no missing values.")
+```
+b. Which variables are associated with the target variable G3?
+Used appropriate plots and test statistics based on variable types. 
+```{r}
+print("Numerical variables:
+
+age , 
+Medu (Mother's education level) , 
+Fedu (Father's education level) , 
+traveltime , 
+studytime , 
+failures , 
+famrel (Family relationship quality) , 
+freetime , 
+goout , 
+Dalc (Weekday alcohol consumption) , 
+Walc (Weekend alcohol consumption) , 
+health , 
+absences , 
+G1 (Grade 1) , 
+G2 (Grade 2) , 
+G3 (Grade 3)")
+```
+```{r}
+print(" Categorical variables:
+
+school , 
+sex , 
+address , 
+famsize (Family size) , 
+Pstatus (Parent's cohabitation status) , 
+Mjob (Mother's job) , 
+Fjob (Father's job) , 
+reason (Reason to choose this school) , 
+guardian , 
+schoolsup (Extra educational support) , 
+famsup (Family educational support) , 
+paid (Extra paid classes within the course subject) , 
+activities (Extracurricular activities) ,
+nursery , 
+higher (Wants to take higher education) , 
+internet , 
+romantic (In a romantic relationship) , 
+workclass , 
+education ,
+marital-status ,
+occupation , 
+relationship ,
+race ,
+native-country ,
+income ")
+```
+#Unique values ofnumeric features
+```{r}
+ unique(df_grade$G3 )
+ unique(df_grade$G2 )
+ unique(df_grade$absences )
+ unique(df_grade$age )
+ print("The above variables -G1, G2, G3, absences , age are discrete variables but neither nominal nor discrete. Also they are quantitative nature is non-continous as per the description of features of dataset.")
+ unique(df_grade$health )
+ unique(df_grade$Walc )
+ unique(df_grade$Dalc )
+ unique(df_grade$goout )
+ unique(df_grade$freetime )
+ unique(df_grade$famrel )
+ unique(df_grade$failures )
+ unique(df_grade$studytime )
+ unique(df_grade$traveltime )
+ 
+ unique(df_grade$Medu )#discrete ordinal
+ unique(df_grade$Fedu )#discrete ordinal
+ print("'travel time','studytime','failures','famrel','freetime', 'goout','Dalc', 'Walc', 'health','Fedu', 'Medu'  are discrete ordinal")
+```
+#Reference obtained from google
+#Spearman correlation coefficients of discrete  ordinal variables 'travel_time', 'study_time', 'failures', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health','Medu', 'Fedu'
+```{r}
+
+
+cat('Spearman correlation coefficient of Medu and G3 is',cor(df_grade$Medu, df_grade$G3, method="spearman"))
+
+
+```
+```{r}
+cat('Spearman correlation coefficient of Fedu and G3:',cor(df_grade$Fedu, df_grade$G3, method="spearman"))
+```
+```{r}
+cat('Spearman correlation coefficient of health and G3:',cor(df_grade$health, df_grade$G3, method="spearman"))
+```
+```{r}
+cat('Spearman correlation coefficient of  Walc and G3:',cor(df_grade$Walc, df_grade$G3, method="spearman"))
+```
+```{r}
+cat('Spearman correlation coefficient of freetime  and G3:',cor(df_grade$freetime, df_grade$G3, method="spearman"))
+```
+```{r}
+cat('Spearman correlation coefficient of study time  and G3:',cor(df_grade$studytime, df_grade$G3, method="spearman"))
+```
+```{r}
+cat('spearman correlation coefficient of failures and G3 is',cor(df_grade$failures, df_grade$G3, method="spearman"))
+```
+```{r}
+cat('Spearman correlation coefficient of travel time and G3:',cor(df_grade$traveltime, df_grade$G3, method="spearman"))
+```
+```{r}
+
+cat('Spearman correlation coefficient of famrel and G3:',cor(df_grade$famrel, df_grade$G3, method="spearman"))
+```
+```{r}
+cat('Spearman correlation coefficient of Dalc and G3:',cor(df_grade$Dalc, df_grade$G3, method="spearman"))
+```
+```{r}
+
+cat('Spearman correlation coefficient of goout and G3:',cor(df_grade$goout, df_grade$G3, method="spearman"))
+```
+```{r}
+print("Spearman correlation coefficients of discrete  ordinal variables 'travel_time', 'study_time', 'failures', 'famrel', 'freetime', 'goout', 'Dalc', 'Walc', 'health','Medu', 'Fedu' does not show any signifiacnt relation with target variable in any direction.")
+print("As Spearman correlation assesses monotonic relationships and does not capture nonlinear relationships or provide information about the magnitude of the effect, these features will not be removed noting that correlation does not imply causation. Other factors may influence both variables, and further analysis is needed to understand the underlying mechanisms driving this relationship.")
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+
+
+#  the target variable
+target_var <- "G3"
+
+#  numerical and categorical variables
+numerical_vars <- c("age",                     "absences", "G1", "G2")
+categorical_vars <- c("school", "sex", "address", "famsize", "Pstatus", 
+                      "Mjob", "Fjob", "reason", "guardian", "schoolsup", 
+                      "famsup", "paid", "activities", "nursery", "higher", 
+                      "internet", "romantic"  
+                       )
+#discrete  ordinal (non-continuous)  variables such as medu, fedu, studytime, free-time, etc.  use spearman rank correlation or kendall correlation 
+
+#  perform appropriate statistical tests based on variable types
+perform_tests <- function(var, target_var) {
+  # Check if variable and target variable are not null
+  if (!is.null(df_grade[[var]]) && !is.null(df_grade[[target_var]])) {
+    # Check variable type
+    if (var %in% numerical_vars) {
+      # Perform correlation test for numerical variables
+      cor.test(df_grade[[var]], df_grade[[target_var]])
+    } else if (var %in% categorical_vars) {
+          if (var %in% numerical_vars) {
+      # Correlation analysis for numerical variables
+      correlation <- cor.test(df_grade[[var]], df_grade[[target_var]])
+      print(correlation)
+    } else {
+      # ANOVA or Kruskal-Wallis test for categorical variables
+      if (length(unique(df_grade[[var]])) <= 2) {
+        # If only two levels, use t-test
+        t_test <- t.test(df_grade[[target_var]] ~ df_grade[[var]])
+        print(t_test)
+      } else {
+        # If more than two levels, use ANOVA or Kruskal-Wallis test
+        if (shapiro.test(df_grade[[target_var]])$p.value > 0.05) {
+          # If target variable is normally distributed, use ANOVA
+          anova_test <- aov(df_grade[[target_var]] ~ df_grade[[var]])
+          print(summary(anova_test))
+        } else {
+          # If target variable is not normally distributed, use Kruskal-Wallis test
+          kruskal_test <- kruskal.test(df_grade[[target_var]] ~ df_grade[[var]])
+          print(kruskal_test)
+        }
+      }
+    } 
+  } else {
+    cat("Variable", var, "or target variable", target_var, "is null.\n")
+  }
+  }
+}
+
+
+# Loop through each variable and perform the appropriate test
+for (var in c(numerical_vars, categorical_vars)) {
+  cat("Test results for variable", var, ":\n")
+  print(perform_tests(var, target_var))
+  cat("\n")
+}
+
+```
+```{r}
+print(" Based on the above test results, these six variables (famrel, freetime, Dalc, Walc, health, absences) are not significantly associated with the target variable G3 as pvalue is greater than 0.5 and so could not reject null-hypothesis.")
+
+```
+#Plotting
+#Boxplot
+```{r}
+#  the target variable
+target_var <- "G3"
+
+#  numerical and categorical variables
+numerical_vars <- c("age", "Medu", "Fedu", "traveltime", "studytime", "failures", 
+                    "famrel", "freetime", "goout", "Dalc", "Walc", "health", 
+                    "absences", "G1", "G2")
+categorical_vars <- c("school", "sex", "address", "famsize", "Pstatus", 
+                      "Mjob", "Fjob", "reason", "guardian", "schoolsup", 
+                      "famsup", "paid", "activities", "nursery", "higher", 
+                      "internet", "romantic" 
+                       )
+#  the relationships between each variable and G3
+#  used scatter plots for numerical variables and box plots for categorical variables
+
+# Box plots for categorical variables
+for (var in categorical_vars) {
+  print(ggplot(df_grade, aes_string(x = var, y = target_var)) +
+    geom_boxplot() +
+    labs(title = paste("Relationship between", var, "and", target_var)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) ) # Rotate x-axis labels for better readability
+}
+
+
+```
+```{r}
+print("pstatus, paid, activities, nursery has means almost at the same level with G3 wheras other variables has means at significant different level which are incomparable toone another of both groups. ")
+```
+
+#Scatterplots
+
+```{r}
+#  the target variable
+target_var <- "G3"
+
+#  numerical and categorical variables
+numerical_vars <- c("age", "Medu", "Fedu", "traveltime", "studytime", "failures", 
+                    "famrel", "freetime", "goout", "Dalc", "Walc", "health", 
+                    "absences", "G1", "G2")
+categorical_vars <- c("school", "sex", "address", "famsize", "Pstatus", 
+                      "Mjob", "Fjob", "reason", "guardian", "schoolsup", 
+                      "famsup", "paid", "activities", "nursery", "higher", 
+                      "internet", "romantic", "workclass", "education", 
+                      "marital-status", "occupation", "relationship", "race", 
+                      "native-country", "income")
+
+#  the relationships between each variable and G3
+#scatter plots for numerical variables 
+
+# Scatter plots for numerical variables
+for (var in numerical_vars) {
+  print(ggplot(df_grade, aes_string(x = var, y = target_var)) +
+    geom_point() +
+    labs(title = paste("Relationship between", var, "and", target_var)))
+}
+
+
+
+```
+```{r}
+print(" G1, G2 has better relation with G3")
+```
+
+
+
+c. Draw a histogram of the target variable “G3” and interpret it.
+#Reference obtained from the R documentation and the knwledge of data visualization course in R
+```{r}
+# Load necessary library
+library(ggplot2)
+
+# Draw histogram of G3
+ggplot(df_grade, aes(x = G3)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+  labs(title = "Histogram of G3", x = "G3", y = "Frequency") +
+  theme_minimal()
+
+
+```
+
+Split the data into train and test. Use 80% of samples for training and 20% of samples for testing.
+
+```{r}
+#install dplyr if required
+library(dplyr)
+
+# Removed the specified variables from the dataframe
+df_gradeg3 <- df_grade 
+#%>% 
+#  select(-famrel, -freetime, -Dalc, -Walc, -health, -absences)
+
+```
+ set the random seed: set.seed(123)
+```{r}
+#insatll caret
+install.packages("caret")
+library(caret)
+
+# Set the seed for reproducibility
+set.seed(123)
+
+# Create an index for splitting the data
+index <- createDataPartition(df_gradeg3$G3, p = 0.8, list = FALSE)
+
+# Split the data into training and testing sets
+train_data <- df_gradeg3[index, ]
+test_data <- df_gradeg3[-index, ]
+
+
+```
+Training  and evaluation using linear regression
+
+Use caret package to run 10 fold cross validation using linear regression method on the train
+data to predict the “G3” variable .
+```{r}
+train.control =trainControl(method = "cv", number = 10)
+model =train(G3~.,data = df_gradeg3,method ="lm",trControl = train.control)
+```
+
+#Print the resulting model to see the cross validation RMSE. 
+
+#Reference obtained from lecture slides
+```{r}
+
+print(model)
+
+
+```
+```{r}
+print(" Here RMSE is 1.996899 in the cross validation of linear regression.")
+```
+
+In addition, 
+# summary of the model and interpretation of the coefficients. 
+Which coefficients are statistically different from zero? What does this mean?
+```{r}
+summary(model)
+```
+```{r}
+print(" As known,  the coefficients with a p-value less than the significance level (typically 0.05) are considered statistically different from zero which means their effect on the response variable (G3) is not significant in the presence of other predictors. ")
+```
+```{r}
+print("Coefficients with p-values greater than 0.05 are considered not statistically different from zero, meaning their effect on the response variable (G3) is not significant in the presence of other predictors. These coefficients include variables such as schoolMS, sexM, age, addressU, famsizeLE3, PstatusT, Medu, Fedu, Mjobhealth, Mjobother, Mjobservices, Mjobteacher, Fjobhealth, Fjobother, Fjobservices, Fjobteacher, reasonhome, reasonother, reasonreputation, guardianmother, guardianother, traveltime, studytime, failures, schoolsupyes, famsupyes, paidyes, activitiesyes, nurseryyes, higheryes, internetyes, romanticyes, and goout.")
+```
+
+
+```{r}
+print(" From the above sumary of the model, G1 and G2 are statistically different from zero and so these are strong predictors of G3 even in the presence of other predictors.")
+print(" Also, The intercept does not have a statistically significant coefficient (p-value = 0.74002), indicating that when all other predictors are zero, the expected value of G3 is not significantly different from zero.")
+```
+Training  and evaluation using step wise linear regression method 
+
+#k=10 fold cross validation using step wise linear regression method 
+Set the random seed again. We need to do this before each training to ensure we get the same folds in
+cross validation. Set.seed(123) so we can compare the models using their cross validation RMSE.(2 pts) Use
+caret and leap packages to run a 10 fold cross validation using step wise linear regression method with
+backward selection on the train data. The train method by default uses maximum of 4 predictors and reports
+the best models with 1..4 predictors. We need to change this parameter to consider all predictors. So inside
+your train function, add the following parameter tuneGrid = data.frame(nvmax = 1:n), where n is the
+number of variables you use to predict “G3”. Which model (with how many variables or nvmax ) has the
+lowest cross validation RMSE? Print and interpret the summary of the final model, which variables are selected in the
+model with the lowest RMSE?
+```{r}
+#installleaps
+install.packages("leaps")
+library(leaps)
+library(caret)
+train.control =trainControl(method = "cv", number = 10)
+step.model <- train(G3 ~., data = df_gradeg3,method ="leapBackward",trControl = train.control)
+print(step.model)
+summary(step.model$finalModel)
+
+```
+```{r}
+print(" Here it can be observed that at nvmax of 2 RMSE is lower when compared to higher values of nvmax.")
+
+```
+
+
+```{r}
+print("Fromthe above summary of model without tuning the grid, it can be concluded that G1, G2 are significant contributes in the prediction of G3.")
+```
+#tunegrid in cross validation of step wise linear regression model
+```{r}
+install.packages("leaps")
+library(leaps)
+library(caret)
+train.control =trainControl(method = "cv", number = 10)
+step.model <- train(G3 ~., data = df_gradeg3,method ="leapBackward",tuneGrid = data.frame(nvmax = 1:ncol(df_gradeg3)),trControl = train.control)
+print(step.model)
+summary(step.model$finalModel)
+```
+
+```{r}
+print(" Fromthe above summary after tuning the grid in cross validation of stepwise linear regresssion model, it is found that the model with the lowest cross-validation RMSE has nvmax = 2, which means it includes a maximum of 2 predictors which are 
+G1,
+G2. Also intercept is included." )
+
+```
+
+Which model does better at predicting G3 based on the cross validation RMSE?
+```{r}
+print(" From the RMSE of 10 fold cross validations of linear regression and stepwise linear regressioo after tuning the grid it can be concluded that the model after tuning has the lowest RMSE which is 1.88 at nvmax is 2 when compared to others whose are 1.99 in the method= lm and higher at nvmax>2 ")
+```
+Results
+
+Get the predictions of
+this model for the test data and report RMSE.
+#Reference obtained
+```{r}
+# Fit the model with nvmax = 2 to the entire training data
+final_model <- lm(G3 ~ G1 + G2, data = train_data)
+
+# Predict G3 values for the test data
+predictions <- predict(final_model, newdata = test_data)
+
+#  RMSE
+rmse <- sqrt(mean((test_data$G3 - predictions)^2))
+rmse
+
+
+```
+```{r}
+head(predictions)
+```
+```{r}
+cat(" RMSE of the model on test data is ", rmse)
+```
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++END+++++++++++++++++++++++++++++++++++++++++++++++++++++++
